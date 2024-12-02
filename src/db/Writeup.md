@@ -2,27 +2,29 @@
 
 ## Describe any design decisions you made.
 
-1. **Projection**  
-   The `DbFile` processes the input and extracts only the specified fields, placing them in the output `DbFile`. By using `TupleDesc` and the `index_of` method, the field order and schema compatibility are preserved, ensuring that the output matches the required structure.
+1. **Fixed-Width Buckets**  
+   The histogram splits the range `[min, max]` into equally sized sections, or "buckets." This helps save memory and makes it easy to predict how long operations will take when adding values or estimating selectivity.
 
-2. **Filters**  
-   The filter operation evaluates each tuple against a list of predicates. Tuples that satisfy all conditions are written to the output. Each predicate is applied using the `PredicateOp` logic, allowing for flexibility in handling complex conditions.
+2. **Error Handling During Setup**  
+   When setting up the histogram, the constructor checks that the input values for `min` and `max` are valid. If not, it raises an error to prevent problems during initialization.
 
-3. **Aggregate**  
-   For grouping and aggregation, hash maps are used to store results and counts. The use of `std::variant` ensures safe handling of numeric fields of varying types. This design enables efficient processing, particularly when working with large datasets.
-
-4. **Join**  
-   Equality joins are optimized by using a hash table to quickly match keys, while inequality joins compare tuples pair by pair. The hash-based approach is highly efficient for equality conditions in large datasets, while the nested loop approach ensures all conditions are checked for inequality joins.
-
-5. **Errors**  
-   To handle invalid inputs, the code throws `std::runtime_error` exceptions with clear error messages. This makes debugging straightforward by pinpointing the issue.
-
+3. **Fractional Bucket Contributions**  
+   For range queries like `LT` or `LE`, the contribution of a value is calculated based on how far it is within a bucket. This improves the accuracy of selectivity estimation.
+---
 ## Describe any missing or incomplete elements of your code.
-We have successfully passed all provided tests, which confirms that no parts of the code are missing or incomplete.
+
+1. Everything is completed
 
 ## Describe how long you spent on the assignment and whether there was anything you found particularly difficult or confusing.
-I spent about an hour each day working on this project. One of the hardest challenges was implementing the `min` and `sum` functions for the aggregate operation. The main challenge was managing numeric fields of varying types, such as `int` and `double`, to ensure accurate handling. To address this, I utilized `std::variant` to ensure type safety and leveraged `std::visit` to process and compare the fields reliably and consistently.
 
+I spent approximately 8 hours on this assignment
+
+Personally, I had a difficult time passing the `ColumnStatsTest.less_than_or_equals` test. I later on discovered that the issue might of came from calculating how much of a bucket should be included when the value `v` was right at the edge of the bucket. When debugging and estimating values "less than or equal to `v`," i realized that the code needed to figure out how much of the last bucket to count without overestimating or underestimating.
+So when debugging i realized my calculation was incorrect, after communication with team make and debugging we concluded with the formula:
+`bucketFraction = (v - bucketRangeStart + 1) / bucket_width_;` which passed the test. 
+
+---
 
 ## If you collaborated with someone else, describe how you split the workload.
-I worked on this project with Yu Liang. While I concentrated on the `join` functionality, improving the join operations. I addressed schema compatibility issues and optimized the join by using `std::unordered_multimap` for handling duplicates in equality joins. Yu worked more on aggreate input, we lat4er combined our efforts, which allowed us to successfully complete the assignment and pass all tests.
+
+I worked with Yu Liang on this assignment. We both first worked on our own and have our design decisions and code implementation. After working on most of the part and passing most of the test we communicated and collaborated our code together finalizing and passing all the tests. 
